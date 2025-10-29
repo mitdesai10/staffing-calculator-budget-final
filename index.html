@@ -51,19 +51,9 @@
                     </div>
                     
                     <div class="target-margin-group">
-                        <label>Target Average Margin Range (%)</label>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <div style="flex: 1;">
-                                <label style="font-size: 12px; color: #666; display: block; margin-bottom: 4px;">MIN</label>
-                                <input type="number" id="targetMarginMin" class="form-control" value="55" min="10" max="95" step="1">
-                            </div>
-                            <span style="padding-top: 20px;">to</span>
-                            <div style="flex: 1;">
-                                <label style="font-size: 12px; color: #666; display: block; margin-bottom: 4px;">MAX</label>
-                                <input type="number" id="targetMarginMax" class="form-control" value="60" min="10" max="95" step="1">
-                            </div>
-                        </div>
-                        <small class="form-hint">All position margins will fall within this range (respecting location caps)</small>
+                        <label for="targetMargin">Target Average Margin (%)</label>
+                        <input type="number" id="targetMargin" class="form-control" value="55" min="10" max="65" step="1">
+                        <small class="form-hint">Minimum target - calculator will maximize if budget allows!</small>
                     </div>
                     
                     <button id="setBudgetBtn" class="btn btn-primary btn-large">
@@ -93,7 +83,7 @@
                             <span class="label">Positions:</span>
                             <span class="value" id="positionCounter">0 / 0</span>
                         </div>
-                        <div class="target-display">Target: <span id="targetDisplay">55%-60%</span> margin range</div>
+                        <div class="target-display">Target: <span id="targetDisplay">55%</span> avg margin (minimum)</div>
                     </div>
 
                     <!-- Financial Summary -->
