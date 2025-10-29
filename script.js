@@ -3,8 +3,7 @@
 // ========================================
 
 let annualBudget = 0;
-let targetMarginMin = 0.55;
-let targetMarginMax = 0.60;
+let targetMargin = 0.55;
 let maxPositions = 0;
 let positions = [];
 let positionIdCounter = 0;
@@ -12,14 +11,7 @@ let appliedDiscount = 0; // Percentage
 let originalPositionsData = []; // Store original values before discount
 
 const MIN_MARGIN = 0.10; // 10%
-const MAX_MARGIN = 0.65; // 65% - default, overridden by location
-
-// Location-specific margin caps
-const MARGIN_CAPS = {
-    onshore: 0.60,   // 60% max
-    offshore: 0.95,  // 95% max
-    nearshore: 0.40  // 40% max
-};
+const MAX_MARGIN = 0.65; // 65%
 
 // ========================================
 // Initialize
@@ -126,13 +118,11 @@ function setupEventListeners() {
 
 function handleSetBudget() {
     const budgetInput = document.getElementById('totalBudget');
-    const targetMinInput = document.getElementById('targetMarginMin');
-    const targetMaxInput = document.getElementById('targetMarginMax');
+    const targetInput = document.getElementById('targetMargin');
     const positionCountInput = document.getElementById('positionCount');
     
     const budget = parseFloat(budgetInput.value);
-    const targetMin = parseFloat(targetMinInput.value) / 100;
-    const targetMax = parseFloat(targetMaxInput.value) / 100;
+    const target = parseFloat(targetInput.value) / 100;
     const count = parseInt(positionCountInput.value);
     
     if (!budget || budget <= 0) {
@@ -145,28 +135,17 @@ function handleSetBudget() {
         return;
     }
     
-    if (!targetMin || !targetMax) {
-        alert('❌ Please enter both minimum and maximum margin');
-        return;
-    }
-    
-    if (targetMin < 0.10 || targetMax > 0.95) {
-        alert('❌ Margin range must be between 10% and 95%');
-        return;
-    }
-    
-    if (targetMin >= targetMax) {
-        alert('❌ Minimum margin must be less than maximum margin');
+    if (!target || target < 0.10 || target > 0.65) {
+        alert('❌ Target margin must be between 10% and 65%');
         return;
     }
     
     annualBudget = budget;
-    targetMarginMin = targetMin;
-    targetMarginMax = targetMax;
+    targetMargin = target;
     maxPositions = count;
     
     console.log('💰 Annual Budget:', formatCurrency(annualBudget));
-    console.log('🎯 Target Margin Range:', (targetMarginMin * 100).toFixed(0) + '% - ' + (targetMarginMax * 100).toFixed(0) + '%');
+    console.log('🎯 Target Margin:', (targetMargin * 100).toFixed(0) + '% (minimum)');
     console.log('📊 Max Positions:', maxPositions);
     
     document.getElementById('budgetEntrySection').style.display = 'none';
@@ -175,7 +154,7 @@ function handleSetBudget() {
     document.getElementById('budgetAmount').textContent = formatCurrency(annualBudget);
     document.getElementById('budgetMonthly').textContent = formatCurrency(annualBudget / 12);
     document.getElementById('positionCounter').textContent = `0 / ${maxPositions}`;
-    document.getElementById('targetDisplay').textContent = (targetMarginMin * 100).toFixed(0) + '%-' + (targetMarginMax * 100).toFixed(0) + '%';
+    document.getElementById('targetDisplay').textContent = (targetMargin * 100).toFixed(0) + '%';
 }
 
 // ========================================
@@ -329,27 +308,10 @@ function calculateRatesAndMargins() {
         alert(`❌ Budget too low!\n\nYour costs: ${formatCurrency(totalAnnualCost)}/year\nYour budget: ${formatCurrency(annualBudget)}/year\n\nThis gives only ${(achievedMargin * 100).toFixed(1)}% margin.\nYou need at least ${formatCurrency(totalAnnualCost / (1 - MIN_MARGIN))} for 10% margin.`);
     }
     
-    // Step 4: Assign margins within the user's target range (respecting location caps)
-    const randomMargins = positions.map(pos => {
-        const maxMarginForLocation = MARGIN_CAPS[pos.location] || MAX_MARGIN;
-        
-        // Use the SMALLER of: location cap or user's max range
-        const effectiveMax = Math.min(maxMarginForLocation, targetMarginMax);
-        
-        // Use the LARGER of: 10% minimum or user's min range
-        const effectiveMin = Math.max(MIN_MARGIN, targetMarginMin);
-        
-        // If effective range is invalid (min >= max), use location cap range
-        if (effectiveMin >= effectiveMax) {
-            return Math.random() * (maxMarginForLocation - MIN_MARGIN) + MIN_MARGIN;
-        }
-        
-        // Generate random margin within effective range
-        return Math.random() * (effectiveMax - effectiveMin) + effectiveMin;
-    });
-    
-    console.log('🎯 Target Range:', (targetMarginMin * 100).toFixed(0) + '% - ' + (targetMarginMax * 100).toFixed(0) + '%');
-    console.log('📊 Assigned Margins:', randomMargins.map(m => (m * 100).toFixed(1) + '%').join(', '));
+    // Step 4: Assign random margins between 10-65% to each position
+    const randomMargins = positions.map(() => 
+        Math.random() * (MAX_MARGIN - MIN_MARGIN) + MIN_MARGIN
+    );
     
     // Calculate revenue each position would generate with these random margins
     const revenues = positions.map((pos, i) => 
@@ -369,17 +331,14 @@ function calculateRatesAndMargins() {
         pos.monthlyProfit = pos.monthlyRevenue - pos.monthlyCost;
         pos.margin = pos.monthlyRevenue > 0 ? pos.monthlyProfit / pos.monthlyRevenue : 0;
         
-        // Get location-specific max margin
-        const maxMarginForLocation = MARGIN_CAPS[pos.location] || MAX_MARGIN;
-        
-        // Clamp to 10% minimum and location-specific maximum
+        // Clamp to 10-65% range
         if (pos.margin < MIN_MARGIN) {
             pos.margin = MIN_MARGIN;
             pos.monthlyRevenue = pos.monthlyCost / (1 - pos.margin);
             pos.monthlyProfit = pos.monthlyRevenue - pos.monthlyCost;
         }
-        if (pos.margin > maxMarginForLocation) {
-            pos.margin = maxMarginForLocation;
+        if (pos.margin > MAX_MARGIN) {
+            pos.margin = MAX_MARGIN;
             pos.monthlyRevenue = pos.monthlyCost / (1 - pos.margin);
             pos.monthlyProfit = pos.monthlyRevenue - pos.monthlyCost;
         }
@@ -456,18 +415,14 @@ function renderTable() {
             let marginClass = '';
             let marginIcon = '';
             const marginPercent = pos.margin * 100;
-            const maxMarginForLocation = (MARGIN_CAPS[pos.location] || MAX_MARGIN) * 100;
             
-            // Color code based on percentage of location max
-            const percentOfMax = marginPercent / maxMarginForLocation;
-            
-            if (percentOfMax >= 0.85) {
+            if (marginPercent >= 60) {
                 marginClass = 'excellent';
                 marginIcon = '🎉';
-            } else if (percentOfMax >= 0.65) {
+            } else if (marginPercent >= 50) {
                 marginClass = 'good';
                 marginIcon = '✅';
-            } else if (percentOfMax >= 0.40) {
+            } else if (marginPercent >= 30) {
                 marginClass = 'warning';
                 marginIcon = '⚠️';
             } else {
@@ -558,15 +513,15 @@ function updateWarnings() {
         container.appendChild(warning);
     }
     
-    // Below target range
-    if (avgMargin < targetMarginMin * 100 - 0.5) { // At least 0.5% below minimum
+    // Below target
+    if (avgMargin < targetMargin * 100 - 0.5) { // At least 0.5% below target
         const warning = document.createElement('div');
         warning.className = 'warning-box warning';
         warning.innerHTML = `
             <div class="warning-icon">⚠️</div>
             <div class="warning-text">
-                <strong>Below Target Range</strong><br>
-                <small>Current: ${avgMargin.toFixed(1)}% | Target: ${(targetMarginMin * 100).toFixed(0)}%-${(targetMarginMax * 100).toFixed(0)}%</small>
+                <strong>Below Target</strong><br>
+                <small>Current: ${avgMargin.toFixed(1)}% | Target: ${(targetMargin * 100).toFixed(0)}%</small>
             </div>
         `;
         container.appendChild(warning);
