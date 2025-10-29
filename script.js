@@ -248,6 +248,12 @@ function handleAddPosition(e) {
     // Update position counter
     document.getElementById('positionCounter').textContent = `${positions.length} / ${maxPositions}`;
     
+    // CRITICAL: Show positions table IMMEDIATELY
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('positionsContainer').style.display = 'block';
+    document.getElementById('clearAllBtn').style.display = 'block';
+    console.log('✅ Positions table shown');
+    
     // ONLY CALCULATE WHEN ALL POSITIONS ARE ADDED!
     if (positions.length >= maxPositions) {
         console.log('🎯 All positions added! Now calculating rates to use FULL budget...');
@@ -260,6 +266,11 @@ function handleAddPosition(e) {
         document.querySelectorAll('input[name="location"]').forEach(r => r.disabled = true);
         document.querySelector('#positionForm button[type="submit"]').disabled = true;
         document.querySelector('#positionForm button[type="submit"]').textContent = '✅ All Positions Added';
+        
+        // Show recalculate and discount
+        document.getElementById('recalculateBtn').style.display = 'block';
+        document.getElementById('discountSection').style.display = 'block';
+        saveOriginalPositionsData();
     } else {
         // Just show placeholder values until all positions added
         positions.forEach(pos => {
@@ -271,7 +282,7 @@ function handleAddPosition(e) {
         console.log(`⏳ Waiting for ${maxPositions - positions.length} more position(s)...`);
     }
     
-    // Update display
+    // Update display to render the table
     updateDisplay();
     
     // Reset form
@@ -279,20 +290,6 @@ function handleAddPosition(e) {
     hoursInput.value = '';
     document.querySelectorAll('input[name="location"]').forEach(r => r.checked = false);
     document.getElementById('previewBox').style.display = 'none';
-    
-    // Show UI elements
-    document.getElementById('placeholder').style.display = 'none';
-    document.getElementById('positionsContainer').style.display = 'block';
-    document.getElementById('clearAllBtn').style.display = 'block';
-    
-    // Only show recalculate button and discount section after all positions added
-    if (positions.length >= maxPositions) {
-        document.getElementById('recalculateBtn').style.display = 'block';
-        document.getElementById('discountSection').style.display = 'block';
-        
-        // Store original values for discount calculation
-        saveOriginalPositionsData();
-    }
 }
 
 // ========================================
