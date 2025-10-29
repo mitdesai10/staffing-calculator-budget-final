@@ -522,7 +522,7 @@ function updateFinancials() {
     marginElement.className = 'margin';
     
     if (avgMargin >= 60) marginElement.classList.add('excellent');
-    else if (avgMargin >= targetMargin * 100) marginElement.classList.add('good');
+    else if (avgMargin >= minTargetMargin * 100) marginElement.classList.add('good');
     else if (avgMargin >= 30) marginElement.classList.add('warning');
     else marginElement.classList.add('danger');
 }
@@ -554,15 +554,15 @@ function updateWarnings() {
         container.appendChild(warning);
     }
     
-    // Below target
-    if (avgMargin < targetMargin * 100 - 0.5) { // At least 0.5% below target
+    // Below target range
+    if (avgMargin < minTargetMargin * 100 - 0.5) { // At least 0.5% below minimum target
         const warning = document.createElement('div');
         warning.className = 'warning-box warning';
         warning.innerHTML = `
             <div class="warning-icon">⚠️</div>
             <div class="warning-text">
-                <strong>Below Target</strong><br>
-                <small>Current: ${avgMargin.toFixed(1)}% | Target: ${(targetMargin * 100).toFixed(0)}%</small>
+                <strong>Below Target Range</strong><br>
+                <small>Current: ${avgMargin.toFixed(1)}% | Target: ${(minTargetMargin * 100).toFixed(0)}% - ${(maxTargetMargin * 100).toFixed(0)}%</small>
             </div>
         `;
         container.appendChild(warning);
