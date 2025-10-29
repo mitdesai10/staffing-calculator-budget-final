@@ -3,7 +3,8 @@
 // ========================================
 
 let annualBudget = 0;
-let targetMargin = 0.55;
+let minTargetMargin = 0.55;
+let maxTargetMargin = 0.60;
 let maxPositions = 0;
 let positions = [];
 let positionIdCounter = 0;
@@ -118,11 +119,13 @@ function setupEventListeners() {
 
 function handleSetBudget() {
     const budgetInput = document.getElementById('totalBudget');
-    const targetInput = document.getElementById('targetMargin');
+    const minMarginInput = document.getElementById('minMargin');
+    const maxMarginInput = document.getElementById('maxMargin');
     const positionCountInput = document.getElementById('positionCount');
     
     const budget = parseFloat(budgetInput.value);
-    const target = parseFloat(targetInput.value) / 100;
+    const minMargin = parseFloat(minMarginInput.value) / 100;
+    const maxMargin = parseFloat(maxMarginInput.value) / 100;
     const count = parseInt(positionCountInput.value);
     
     if (!budget || budget <= 0) {
@@ -135,17 +138,28 @@ function handleSetBudget() {
         return;
     }
     
-    if (!target || target < 0.10 || target > 0.65) {
-        alert('❌ Target margin must be between 10% and 65%');
+    if (!minMargin || minMargin < 0.10 || minMargin > 0.65) {
+        alert('❌ Minimum margin must be between 10% and 65%');
+        return;
+    }
+    
+    if (!maxMargin || maxMargin < 0.10 || maxMargin > 0.65) {
+        alert('❌ Maximum margin must be between 10% and 65%');
+        return;
+    }
+    
+    if (minMargin >= maxMargin) {
+        alert('❌ Minimum margin must be less than maximum margin');
         return;
     }
     
     annualBudget = budget;
-    targetMargin = target;
+    minTargetMargin = minMargin;
+    maxTargetMargin = maxMargin;
     maxPositions = count;
     
     console.log('💰 Annual Budget:', formatCurrency(annualBudget));
-    console.log('🎯 Target Margin:', (targetMargin * 100).toFixed(0) + '% (minimum)');
+    console.log('🎯 Target Margin Range:', (minTargetMargin * 100).toFixed(0) + '% - ' + (maxTargetMargin * 100).toFixed(0) + '%');
     console.log('📊 Max Positions:', maxPositions);
     
     document.getElementById('budgetEntrySection').style.display = 'none';
@@ -154,7 +168,7 @@ function handleSetBudget() {
     document.getElementById('budgetAmount').textContent = formatCurrency(annualBudget);
     document.getElementById('budgetMonthly').textContent = formatCurrency(annualBudget / 12);
     document.getElementById('positionCounter').textContent = `0 / ${maxPositions}`;
-    document.getElementById('targetDisplay').textContent = (targetMargin * 100).toFixed(0) + '%';
+    document.getElementById('targetDisplay').textContent = (minTargetMargin * 100).toFixed(0) + '% - ' + (maxTargetMargin * 100).toFixed(0) + '%';
 }
 
 // ========================================
@@ -288,27 +302,46 @@ function calculateRatesAndMargins() {
     
     console.log('📊 Total Annual Cost:', formatCurrency(totalAnnualCost));
     console.log('💰 Annual Budget:', formatCurrency(annualBudget));
+    console.log('🎯 Target Margin Range:', (minTargetMargin * 100).toFixed(1) + '% - ' + (maxTargetMargin * 100).toFixed(1) + '%');
     
-    // Step 2: USE EXACTLY THE FULL BUDGET!
-    // Don't calculate optimal - just USE ALL OF IT!
-    const actualMonthlyRevenue = annualBudget / 12;
+    // Step 2: Target monthly revenue from full budget
+    const targetMonthlyRevenue = annualBudget / 12;
     
-    console.log('🎯 Using FULL budget:', formatCurrency(annualBudget));
-    console.log('💵 Monthly revenue target:', formatCurrency(actualMonthlyRevenue));
+    // Step 3: Calculate what average margin this budget would give us
+    const impliedAvgMargin = targetMonthlyRevenue > 0 ? 
+        (targetMonthlyRevenue - totalMonthlyCost) / targetMonthlyRevenue : 0;
     
-    // Step 3: Calculate what margin this gives us
-    const achievedMargin = actualMonthlyRevenue > 0 ? 
-        (actualMonthlyRevenue - totalMonthlyCost) / actualMonthlyRevenue : 0;
-    
-    console.log('📈 Margin with full budget:', (achievedMargin * 100).toFixed(1) + '%');
+    console.log('📈 Implied avg margin with full budget:', (impliedAvgMargin * 100).toFixed(1) + '%');
     
     // Check if budget is too low
-    if (achievedMargin < MIN_MARGIN) {
+    if (impliedAvgMargin < MIN_MARGIN) {
         console.error('❌ Budget too low for minimum 10% margin!');
-        alert(`❌ Budget too low!\n\nYour costs: ${formatCurrency(totalAnnualCost)}/year\nYour budget: ${formatCurrency(annualBudget)}/year\n\nThis gives only ${(achievedMargin * 100).toFixed(1)}% margin.\nYou need at least ${formatCurrency(totalAnnualCost / (1 - MIN_MARGIN))} for 10% margin.`);
+        alert(`❌ Budget too low!\n\nYour costs: ${formatCurrency(totalAnnualCost)}/year\nYour budget: ${formatCurrency(annualBudget)}/year\n\nThis gives only ${(impliedAvgMargin * 100).toFixed(1)}% margin.\nYou need at least ${formatCurrency(totalAnnualCost / (1 - MIN_MARGIN))} for 10% margin.`);
+        return;
     }
     
-    // Step 4: Assign random margins between 10-65% to each position
+    // Step 4: Determine target average margin within the range
+    // If the implied margin is within range, use it. Otherwise, clamp to range.
+    let targetAvgMargin;
+    if (impliedAvgMargin >= minTargetMargin && impliedAvgMargin <= maxTargetMargin) {
+        targetAvgMargin = impliedAvgMargin;
+        console.log('✅ Using implied margin (within range):', (targetAvgMargin * 100).toFixed(1) + '%');
+    } else if (impliedAvgMargin < minTargetMargin) {
+        targetAvgMargin = minTargetMargin;
+        console.log('⬆️ Adjusting to minimum margin:', (targetAvgMargin * 100).toFixed(1) + '%');
+    } else {
+        targetAvgMargin = maxTargetMargin;
+        console.log('⬇️ Adjusting to maximum margin:', (targetAvgMargin * 100).toFixed(1) + '%');
+    }
+    
+    // Step 5: Calculate actual monthly revenue based on target average margin
+    const actualMonthlyRevenue = totalMonthlyCost / (1 - targetAvgMargin);
+    const actualAnnualRevenue = actualMonthlyRevenue * 12;
+    
+    console.log('💵 Target monthly revenue:', formatCurrency(actualMonthlyRevenue));
+    console.log('💰 Target annual revenue:', formatCurrency(actualAnnualRevenue));
+    
+    // Step 6: Assign random margins between 10-65% to each position
     const randomMargins = positions.map(() => 
         Math.random() * (MAX_MARGIN - MIN_MARGIN) + MIN_MARGIN
     );
@@ -320,7 +353,7 @@ function calculateRatesAndMargins() {
     
     const totalRandomRevenue = revenues.reduce((sum, r) => sum + r, 0);
     
-    // Scale factor to hit EXACTLY our full budget revenue
+    // Scale factor to hit our target revenue (which gives us our target average margin)
     const scaleFactor = actualMonthlyRevenue / totalRandomRevenue;
     
     console.log('🔄 Scale factor:', scaleFactor.toFixed(4));
@@ -331,7 +364,7 @@ function calculateRatesAndMargins() {
         pos.monthlyProfit = pos.monthlyRevenue - pos.monthlyCost;
         pos.margin = pos.monthlyRevenue > 0 ? pos.monthlyProfit / pos.monthlyRevenue : 0;
         
-        // Clamp to 10-65% range
+        // Clamp individual position margins to 10-65% range
         if (pos.margin < MIN_MARGIN) {
             pos.margin = MIN_MARGIN;
             pos.monthlyRevenue = pos.monthlyCost / (1 - pos.margin);
@@ -346,32 +379,40 @@ function calculateRatesAndMargins() {
         pos.clientRate = pos.hours > 0 ? pos.monthlyRevenue / pos.hours : 0;
     });
     
-    // Verify we're using full budget (might be slightly off due to margin clamping)
+    // Step 7: Verify final average margin
     const finalMonthlyRevenue = positions.reduce((sum, p) => sum + p.monthlyRevenue, 0);
+    const finalMonthlyProfit = finalMonthlyRevenue - totalMonthlyCost;
+    const finalAvgMargin = finalMonthlyRevenue > 0 ? finalMonthlyProfit / finalMonthlyRevenue : 0;
     const finalAnnualRevenue = finalMonthlyRevenue * 12;
-    const budgetUtilization = (finalAnnualRevenue / annualBudget) * 100;
     
     console.log('✅ Calculations complete!');
     console.log('💰 Final Annual Revenue:', formatCurrency(finalAnnualRevenue));
-    console.log('📊 Budget Utilization:', budgetUtilization.toFixed(1) + '%');
-    
-    const finalMonthlyProfit = finalMonthlyRevenue - totalMonthlyCost;
-    const finalAvgMargin = finalMonthlyRevenue > 0 ? (finalMonthlyProfit / finalMonthlyRevenue) * 100 : 0;
-    
-    console.log('📊 Final Average Margin:', finalAvgMargin.toFixed(1) + '%');
+    console.log('📊 Final Average Margin:', (finalAvgMargin * 100).toFixed(1) + '%');
     console.log('📋 Position margins:', positions.map(p => (p.margin * 100).toFixed(1) + '%').join(', '));
     
-    if (budgetUtilization < 99.5) {
-        console.warn('⚠️ Budget utilization below 99.5% - adjusting...');
-        // Fine-tune to use exactly 100% of budget
-        const adjustmentFactor = annualBudget / (finalMonthlyRevenue * 12);
-        positions.forEach(pos => {
-            pos.monthlyRevenue *= adjustmentFactor;
-            pos.monthlyProfit = pos.monthlyRevenue - pos.monthlyCost;
-            pos.margin = pos.monthlyRevenue > 0 ? pos.monthlyProfit / pos.monthlyRevenue : 0;
-            pos.clientRate = pos.hours > 0 ? pos.monthlyRevenue / pos.hours : 0;
-        });
-        console.log('✅ Adjusted to use 100% of budget!');
+    // Check if final average margin is within target range
+    const marginInRange = finalAvgMargin >= minTargetMargin && finalAvgMargin <= maxTargetMargin;
+    if (marginInRange) {
+        console.log('✅ Average margin is within target range!');
+    } else if (finalAvgMargin < minTargetMargin) {
+        console.log('⚠️ Average margin slightly below range due to margin clamping');
+    } else {
+        console.log('⚠️ Average margin slightly above range due to margin clamping');
+    }
+    
+    // Show budget comparison
+    const budgetDiff = finalAnnualRevenue - annualBudget;
+    const budgetUtilization = (finalAnnualRevenue / annualBudget) * 100;
+    
+    if (Math.abs(budgetDiff) > annualBudget * 0.01) {
+        console.log('ℹ️ Revenue vs Budget: ' + formatCurrency(finalAnnualRevenue) + ' vs ' + formatCurrency(annualBudget));
+        console.log('ℹ️ Difference: ' + formatCurrency(Math.abs(budgetDiff)) + ' (' + budgetUtilization.toFixed(1) + '%)');
+        
+        if (budgetDiff > 0) {
+            console.log('💡 Revenue exceeds budget to meet minimum margin target');
+        } else {
+            console.log('💡 Revenue under budget to meet maximum margin target');
+        }
     }
 }
 

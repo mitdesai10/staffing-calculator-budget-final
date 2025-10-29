@@ -16,7 +16,7 @@
             <div class="header-content">
                 <div>
                     <h1 class="header-title">💰 Budget-Based Staffing Calculator</h1>
-                    <p class="header-subtitle">Enter annual budget → Add positions → Get optimized rates (10-65% margins)</p>
+                    <p class="header-subtitle">Enter annual budget → Add positions → Get optimized rates (avg margin in your target range)</p>
                 </div>
                 <div class="header-actions">
                     <button id="refreshBtn" class="btn-refresh" onclick="refreshData()" title="Refresh data">
@@ -51,9 +51,19 @@
                     </div>
                     
                     <div class="target-margin-group">
-                        <label for="targetMargin">Target Average Margin (%)</label>
-                        <input type="number" id="targetMargin" class="form-control" value="55" min="10" max="65" step="1">
-                        <small class="form-hint">Minimum target - calculator will maximize if budget allows!</small>
+                        <label>Target Average Margin Range (%)</label>
+                        <div class="margin-range-inputs">
+                            <div class="margin-input-wrapper">
+                                <label for="minMargin" class="small-label">Min</label>
+                                <input type="number" id="minMargin" class="form-control margin-input" value="55" min="10" max="65" step="1">
+                            </div>
+                            <span class="range-separator">-</span>
+                            <div class="margin-input-wrapper">
+                                <label for="maxMargin" class="small-label">Max</label>
+                                <input type="number" id="maxMargin" class="form-control margin-input" value="60" min="10" max="65" step="1">
+                            </div>
+                        </div>
+                        <small class="form-hint">Average margin will be within this range. Individual positions can vary (10-65%).</small>
                     </div>
                     
                     <button id="setBudgetBtn" class="btn btn-primary btn-large">
@@ -83,7 +93,7 @@
                             <span class="label">Positions:</span>
                             <span class="value" id="positionCounter">0 / 0</span>
                         </div>
-                        <div class="target-display">Target: <span id="targetDisplay">55%</span> avg margin (minimum)</div>
+                        <div class="target-display">Target: <span id="targetDisplay">55-60%</span> avg margin</div>
                     </div>
 
                     <!-- Financial Summary -->
@@ -180,8 +190,8 @@
                         <h3>Ready to Optimize Rates</h3>
                         <p>Add positions and we'll calculate the best client rates to hit your target margin</p>
                         <div class="placeholder-features">
-                            <div class="feature">✓ Margins between 10-65%</div>
-                            <div class="feature">✓ Average margin = your target</div>
+                            <div class="feature">✓ Individual margins: 10-65%</div>
+                            <div class="feature">✓ Average margin: your target range</div>
                             <div class="feature">✓ Monthly & annual projections</div>
                         </div>
                     </div>
